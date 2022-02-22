@@ -1,10 +1,12 @@
+from http.client import ImproperConnectionState
 from tkinter import Y
 import pygame
 import random
+import os
 
 
 class BoardCornerPiece :
-    def __init__(self, positionX, positionY, combination = None) -> None:
+    def __init__(self, positionX, positionY, combination = None, imageIdx = None) -> None:
         self.orientations = [(1,5),(5,7),(7,3),(3,1)]
         if combination == None:
             self.orientation = self.orientations[random.randint(0,3)]
@@ -14,6 +16,8 @@ class BoardCornerPiece :
         self.y = positionY
         self.windowSize = 700
         self.layout = [None] * 9 # create an empty list of length 9
+        
+        self.imgIdx = imageIdx
         self.initPiece()
 
     def initPiece(self):
@@ -58,7 +62,7 @@ class BoardCornerPiece :
 class BoardStraightPiece:
     
     def __init__(self, positionX, positionY, combination = None) -> None:
-        self.orientationsStraight = [(1,7),(5,3)]
+        self.orientationsStraight = [(1,7),(5,3),(1,7),(5,3)]
         if combination == None:
             self.orientation = self.orientationsStraight[random.randint(0,1)]
         else:

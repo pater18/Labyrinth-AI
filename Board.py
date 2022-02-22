@@ -1,6 +1,8 @@
 import random
+from matplotlib.pyplot import xscale
 import pygame 
 from BoardPiece import *
+#from Labyrinth import DEFAULT_IMAGE_SIZE
 
 BLUE    = (0,   0,   255)
 GREEN   = (0,   255, 0  )
@@ -9,6 +11,35 @@ GRAY    = (200, 200, 200)
 LGRAY   = (150, 150, 150)
 BLACK   = (0,   0,   0  ) 
 BOARDSIZE = 7
+DEFAULT_IMAGE_SIZE = (100,100)
+
+
+def importAndScaleImage(path):
+    
+    Piece = pygame.image.load(os.path.join("images", "Corrected", path))
+    Piece = pygame.transform.scale(Piece, DEFAULT_IMAGE_SIZE)
+    return Piece 
+
+pictures = {
+
+    1 : importAndScaleImage("corner.png"), # corner
+    2 : importAndScaleImage("straight.png"),
+    3 : importAndScaleImage("1.png"),
+    4 : importAndScaleImage("2.png"),
+    5 : importAndScaleImage("3.png"),
+    6 : importAndScaleImage("4.png"),
+    7 : importAndScaleImage("5.png"),
+    8 : importAndScaleImage("6.png"),
+    9 : importAndScaleImage("7.png"),
+    10 : importAndScaleImage("8.png"),
+    11 : importAndScaleImage("9.png"),
+    12 : importAndScaleImage("10.png"),
+    13 : importAndScaleImage("11.png"),
+    14 : importAndScaleImage("12.png"),
+
+}
+
+
 
 class Board:
     def __init__(self, height, width, DISPLAY) -> None:
@@ -16,12 +47,11 @@ class Board:
         self.width = width
         self.piecesList = [None] * 50 # Create an empty list
         self.display = DISPLAY
-        self.placeIndex = 0
         self.constPieces()
         self.addPieces()
         self.drawBoard()
         self.drawValues()
-        self.writeIndex()
+        #self.writeIndex()
         
     def constPieces(self):
         y = 100
@@ -47,6 +77,10 @@ class Board:
         # Add the extra piece to the next move
         self.piecesList[49] = BoardTPiece(0, 0, 0)
 
+
+        
+
+
     def addPieces(self):
   
         xStart = 100
@@ -64,19 +98,23 @@ class Board:
                     elif choice == 2: 
                         self.piecesList[index] = BoardTPiece(xStart * (i + 1), yStart * (j + 1))
         
+        return self.piecesList
         
-        self.piecesList[5] = BoardCornerPiece(600, 100)
-        self.piecesList[47] = BoardStraightPiece(600,700)
-
     def drawBoard(self):
 
+        
         for piece in self.piecesList:
             if piece :
                 for layout, color in piece.layout:
                     if color :
                         pygame.draw.rect(self.display, GREEN, layout)
                     elif not color :
-                        pygame.draw.rect(self.display, RED, layout)         
+                        pygame.draw.rect(self.display, RED, layout) 
+
+        for x in range(7):
+            for y in range(7):
+                self.display.blit(pictures[random.randint(1,14)], ((x + 1) * 100, (y + 1) * 100 ))
+         
 
     def drawValues(self): 
         
@@ -96,6 +134,9 @@ class Board:
             text = font.render(str(i), False, BLUE)
             self.display.blit(text, locations[i - 1])
 
+    def convertPositionToIndex (self, x, y):
+        return int((x - 50) / 100 - 1 + ((y - 50) / 100 -1) * 7)
+
     def writeIndex(self):
         # Function to draw index values on the board. 
         # The function is used for test purpose
@@ -106,8 +147,15 @@ class Board:
             text = font.render(str(i), False, BLUE)
             self.display.blit(text, (rect.x + 40, rect.y + 35))
             
-    def movePiece(self, index):
+    def movePiece(self, index, orientation = 0, currentPosition = ((0 , 0),(0 , 0)) ):
 
+
+        xs = currentPosition[0][0]      # x start position
+        ys = currentPosition[0][1]      # y end position
+        xe = currentPosition[1][0]      # x start position
+        ye = currentPosition[1][1]      # y end position
+
+        # Define the range of indexes that needs to be moved
         moves = {
             1 : (1, 43),
             2 : (3, 45),
@@ -126,14 +174,21 @@ class Board:
         # Copy the extra piece to a variable
         extraType = type(self.piecesList[49])                   # What type is the extra piece
         x, y = self.piecesList[moves[index][0]].getLocation()   # Where should the extra piece go in the end.
-        extra = extraType(x,y)                                  # Create a new piece object with above parameters
+        extra = extraType(x,y, orientation)                                  # Create a new piece object with above parameters
 
         # Create a copy of the piece that is pushed out and save it in a new variable and store it as the extra piece in index 49
         # Only the type is needed since index 49 is only to show the extra piece and the orientation does not matter. 
         pushedPieceType = type(self.piecesList[moves[index][1]]) 
-        self.piecesList[49] = pushedPieceType(0, 0)             # Create the new piece object and store it in index 49
+        
+
 
         if index <= 3 :
+
+            # When a the piece you stand on is moved out of the board, then you are moved to the piece that is pushed in to the board
+            if (self.convertPositionToIndex(xs,ys) == moves[index][1] ) :
+                ys = 150
+
+            # Move all the pieces in coloumn 1, 2 and 3 one down
             for i in range (moves[index][1], moves[index][0], - 7):
                 # Get the values to create a new piece object that can replace the previous in the list
                 tmpType = type(self.piecesList[i - 7])                      # Get the type of the piece above 
@@ -143,9 +198,16 @@ class Board:
                 pass
 
             # Lastly place the extra piece in the top of the board (index 1,2 or 3)
-            self.piecesList[moves[index][0]] = extra                        
-        
+            self.piecesList[moves[index][0]] = extra
+
+
         elif index >= 4 and index <= 6 :
+
+            # When a the piece you stand on is moved out of the board, then you are moved to the piece that is pushed in to the board
+            if (self.convertPositionToIndex(xs,ys) == moves[index][1] ) :
+                xs = 750
+
+            # Move all the pieces in row 4, 5 and 6 one to the left
             for i in range(moves[index][1], moves[index][0]):
                 # Get the values to create a new piece object that can replace the previous in the list
                 tmpType = type(self.piecesList[i + 1])                      # Get the type of the piece above 
@@ -158,6 +220,12 @@ class Board:
             self.piecesList[moves[index][0]] = extra 
         
         elif index >= 7 and index <= 9:
+
+            # When a the piece you stand on is moved out of the board, then you are moved to the piece that is pushed in to the board
+            if (self.convertPositionToIndex(xs,ys) == moves[index][1] ) :
+                ys = 750
+
+            # Move all the pieces in coloumn 7, 8 and 9 one up
             for i in range(moves[index][1], moves[index][0], 7):
                  # Get the values to create a new piece object that can replace the previous in the list
                 tmpType = type(self.piecesList[i + 7])                      # Get the type of the piece above 
@@ -170,6 +238,11 @@ class Board:
             self.piecesList[moves[index][0]] = extra 
 
         elif index >= 10 :
+
+            # When a the piece you stand on is moved out of the board, then you are moved to the piece that is pushed in to the board
+            if (self.convertPositionToIndex(xs,ys) == moves[index][1] ) :
+                xs = 150
+
             for i in range(moves[index][1], moves[index][0], - 1):
                 # Get the values to create a new piece object that can replace the previous in the list
                 tmpType = type(self.piecesList[i - 1])                      # Get the type of the piece above 
@@ -181,6 +254,8 @@ class Board:
             # Lastly place the extra piece in the top of the board (index 1,2 or 3)
             self.piecesList[moves[index][0]] = extra
 
+        self.piecesList[49] = pushedPieceType(0, 0)             # Create the new piece object and store it in index 49
+        return xs, ys, xe, ye
 
 
 
